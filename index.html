@@ -87,6 +87,14 @@ window.onclick = function(event) {
     modal.style.display = "none";
   }
 }
+  
+  // Add an event listener to the input field
+document.getElementById('chat-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        askAI();
+    }
+});
   </script>
 
 </body>
