@@ -273,7 +273,7 @@ div#note-form {
 /* CSS for mobile devices */
 @media (max-width: 600px) {
   #main-stuff {
-    display: none;
+    display: none!important;
   }
 
   #mobile-message {
