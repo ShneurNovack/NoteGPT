@@ -1,145 +1,258 @@
-const messages = document.getElementById("messages");
-const input = document.getElementById("input");
-const submit = document.getElementById("submit");
-const chatbox = document.getElementById("chat-container");
-const toggle = document.getElementById("toggle");
-const typingIndicator = document.getElementById("typing-indicator");
-
-document.addEventListener("DOMContentLoaded", () => {
-  submitNoMessage()
-});
-
-let firstToggle = true;
-
-let conversation = [
-  { role: "user", content: `hi` }
-];
-
-async function submitNoMessage() {
-    // Show typing indicator
-  typingIndicator.style.display = "block";
-
-  const response = await sendToChatAPI(conversation);
-    addMessage(response, "bot");
-  // Hide typing indicator
-  typingIndicator.style.display = "none";
+// Delete the chat log
+function deleteChatLog() {
+    localStorage.removeItem('chatLog');
+    document.getElementById('chat-log').innerHTML = '';
 }
 
 
-async function submitMessage() {
-  const userInput = input.value;
+// Load notes from local storage
+window.onload = function() {
+    let notes = JSON.parse(localStorage.getItem('notes')) || [];
+    let chatLog = JSON.parse(localStorage.getItem('chatLog')) || [];
+    displayNotes(notes);
+    displayChatLog(chatLog);
+};
 
-  addMessage(userInput, "user");
-  conversation.push({ role: "user", content: userInput });
-  input.value = "";
+// Save a note to local storage
+function saveNote() {
+    let title = document.getElementById('note-title').value;
+    let body = document.getElementById('note-body').value;
+    let notes = JSON.parse(localStorage.getItem('notes')) || [];
+    notes.push({ title: title, body: body });
+    localStorage.setItem('notes', JSON.stringify(notes));
+    displayNotes(notes);
+}
 
-  // Show typing indicator
-  typingIndicator.style.display = "block";
+// Display notes
+function displayNotes(notes) {
+    let notesDiv = document.getElementById('notes');
+    notesDiv.innerHTML = '';
+    for (let i = 0; i < notes.length; i++) {
+        let noteDiv = document.createElement('div');
+        let titleDiv = document.createElement('div');
+        titleDiv.textContent = notes[i].title;
+        let bodyDiv = document.createElement('div');
+        bodyDiv.textContent = notes[i].body;
+        let editButton = document.createElement('button');
+        editButton.textContent = 'Edit';
+        editButton.onclick = function() { editNote(i, titleDiv, bodyDiv, editButton); };
+        noteDiv.appendChild(titleDiv);
+        noteDiv.appendChild(bodyDiv);
+        noteDiv.appendChild(editButton);
+        notesDiv.appendChild(noteDiv);
+    }
+}
 
-  const response = await sendToChatAPI(conversation);
+// Edit a note
+function editNote(index, titleDiv, bodyDiv, editButton) {
+    let titleInput = document.createElement('input');
+    titleInput.value = titleDiv.textContent;
+    let bodyTextarea = document.createElement('textarea');
+    bodyTextarea.value = bodyDiv.textContent;
+    let saveButton = document.createElement('button');
+    saveButton.textContent = 'Save';
+    let deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.onclick = function() { deleteNote(index); };
+    titleDiv.parentNode.appendChild(deleteButton);
+    saveButton.onclick = function() {
+        let notes = JSON.parse(localStorage.getItem('notes')) || [];
+        notes[index] = { title: titleInput.value, body: bodyTextarea.value };
+        localStorage.setItem('notes', JSON.stringify(notes));
+        displayNotes(notes);
+        deleteButton.parentNode.removeChild(deleteButton);
+    };
+    titleDiv.parentNode.replaceChild(titleInput, titleDiv);
+    bodyDiv.parentNode.replaceChild(bodyTextarea, bodyDiv);
+    editButton.parentNode.replaceChild(saveButton, editButton);
+}
 
-  // Hide typing indicator
-  typingIndicator.style.display = "none";
 
-  addMessage(response, "bot");
+// Delete a note
+function deleteNote(index) {
+    let notes = JSON.parse(localStorage.getItem('notes')) || [];
+    notes.splice(index, 1);
+    localStorage.setItem('notes', JSON.stringify(notes));
+    displayNotes(notes);
+}
+
+// Ask the AI a question
+function askAI() {
+    let input = document.getElementById('chat-input');
+    let inputValue = input.value;
   
-      const urlRegex = /#(https?:\/\/[^\s]+)/g;
-    const match = urlRegex.exec(response);
-    if (match) {
-        const url = match[1];
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.target = '_blank';
-        anchor.rel = 'noopener noreferrer';
-        anchor.click();
-    }
+    let chatLog = JSON.parse(localStorage.getItem('chatLog')) || [];
+    chatLog.push({ role: 'user', content: inputValue });
+    localStorage.setItem('chatLog', JSON.stringify(chatLog));
+    displayChatLog(chatLog);
+
+    // Get notes and format them for the system message
+    let notes = JSON.parse(localStorage.getItem('notes')) || [];
+    let notesText = notes.map(note => `- Note \n Title: ${note.title}: \n Body: ${note.body}`).join('\n');
+
+    // Prepare the messages for the API call
+    let messages = [
+        { role: 'system', content: `The users existing notes are as follows:
+${notesText}` },
+        ...chatLog
+    ];
+
+    // Show the AI thinking indicator
+    document.getElementById('ai-thinking').style.display = 'block';
+
+    // Call the OpenAI API
+    fetch('https://shneurcors.herokuapp.com/https://notegpt.shneur.workers.dev/', {
+        method: 'POST',
+        body: JSON.stringify({
+            model: 'gpt-4',
+            messages: messages
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+               let aiResponse = data.choices[0].message.content;
+
+ // Check if the AI's response includes any note directives
+        let noteMatches = [...aiResponse.matchAll(/#\[(note)\]\{(.*?)\}\{(.*?)\}/g)];
+        for (let noteMatch of noteMatches) {
+            let noteTitle = noteMatch[2];
+            let noteBody = noteMatch[3];
+            let notes = JSON.parse(localStorage.getItem('notes')) || [];
+            notes.push({ title: noteTitle, body: noteBody });
+            localStorage.setItem('notes', JSON.stringify(notes));
+            displayNotes(notes);
+
+            // Remove the note directive from the AI's response
+            aiResponse = aiResponse.replace(noteMatch[0], '');
+        }
+
+        // Check if the AI's response includes any editNote directives
+        let editNoteMatches = [...aiResponse.matchAll(/#\[(editNote)\]\{(.*?)\}\{(.*?)\}\{(.*?)\}/g)];
+        for (let editNoteMatch of editNoteMatches) {
+            let noteTitle = editNoteMatch[2];
+            let newTitle = editNoteMatch[3];
+            let newBody = editNoteMatch[4];
+            let notes = JSON.parse(localStorage.getItem('notes')) || [];
+            let noteIndex = notes.findIndex(note => note.title === noteTitle);
+            if (noteIndex !== -1) {
+                notes[noteIndex] = { title: newTitle, body: newBody };
+                localStorage.setItem('notes', JSON.stringify(notes));
+                displayNotes(notes);
+
+                // Remove the editNote directive from the AI's response
+                aiResponse = aiResponse.replace(editNoteMatch[0], '');
+            }
+        }
+      
+              // Check if the AI's response includes any deleteNote directives
+        let deleteNoteMatches = [...aiResponse.matchAll(/#\[(deleteNote)\]\{(.*?)\}/g)];
+        for (let deleteNoteMatch of deleteNoteMatches) {
+            let noteTitle = deleteNoteMatch[2];
+            let noteIndex = notes.findIndex(note => note.title === noteTitle);
+            if (noteIndex !== -1) {
+                notes.splice(noteIndex, 1);
+                localStorage.setItem('notes', JSON.stringify(notes));
+                displayNotes(notes);
+
+                // Remove the deleteNote directive from the AI's response
+                aiResponse = aiResponse.replace(deleteNoteMatch[0], '');
+            }
+        }
+      
+        chatLog.push({ role: 'assistant', content: aiResponse });
+        localStorage.setItem('chatLog', JSON.stringify(chatLog));
+        displayChatLog(chatLog);
+
+        // Hide the AI thinking indicator
+        document.getElementById('ai-thinking').style.display = 'none';
+
+    });
+      // Clear the input field
+      let input2 = document.getElementById('chat-input');
+
+    input2.value = '';
 }
 
-input.addEventListener("keydown", async (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault(); // Prevents the default behavior of the "Enter" key.
-    submitMessage();
-  }
+// Add an event listener to the input field
+document.getElementById('chat-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        askAI();
+    }
 });
 
-submit.addEventListener("click", async () => {
-  submitMessage();
-});
 
-function addMessage(text, sender) {
-  const messageDiv = document.createElement("div");
-  messageDiv.classList.add("message");
-  messageDiv.classList.add(sender);
-
-  const processBoldText = (textContent) => {
-    const boldTextRegex = /\*\*(.*?)\*\*/g;
-    let result = '';
-    let lastIndex = 0;
-
-    while ((match = boldTextRegex.exec(textContent)) !== null) {
-      const boldText = match[1];
-      result += textContent.slice(lastIndex, match.index);
-      result += `<strong>${boldText}</strong>`;
-      lastIndex = match.index + match[0].length;
+// Display the chat log
+function displayChatLog(chatLog) {
+    let chatLogDiv = document.getElementById('chat-log');
+    chatLogDiv.innerHTML = '';
+    for (let message of chatLog) {
+        let messageDiv = document.createElement('div');
+        if (message.role === 'user') {
+            messageDiv.id = 'user-message';
+        } else if (message.role === 'assistant') {
+            messageDiv.id = 'assistant-message';
+        }
+        messageDiv.textContent = message.content;
+        chatLogDiv.appendChild(messageDiv);
     }
+      chatLogDiv.scrollTop = chatLogDiv.scrollHeight;
 
-    result += textContent.slice(lastIndex);
-    return result;
-  };
-
-  if (sender === "bot") {
-    text = processBoldText(text);
-
-    // Check for #[img] followed by a URL and create an img element if found
-    const imgRegex = /#\[(img)\]((https?:\/\/[^\s]+))/g;
-    const matchImg = imgRegex.exec(text);
-    if (matchImg) {
-      const imgURL = matchImg[2];
-      const imgElement = document.createElement("img");
-      imgElement.src = imgURL;
-      imgElement.alt = "Image from AI";
-      imgElement.style.maxWidth = "100%";
-      imgElement.style.maxHeight = "200px";
-      imgElement.className = "ai-image";
-      messageDiv.appendChild(imgElement);
-      text = text.replace(matchImg[0], "");
-    }
-
-    // Check for hashtag followed by a URL and redirect if found
-    const urlRegex = /#(https?:\/\/[^\s]+)/g;
-    const match = urlRegex.exec(text);
-      text = text.replace(urlRegex, "");
-   
-  }
-
-  const p = document.createElement("p");
-  p.innerHTML = text;
-  messageDiv.appendChild(p);
-  messages.appendChild(messageDiv);
-  messages.scrollTop = messages.scrollHeight;
 }
 
+// Export notes
+function exportNotes() {
+    let notes = localStorage.getItem('notes');
+    let blob = new Blob([notes], {type: "application/json"});
+    let url = URL.createObjectURL(blob);
 
-
-async function sendToChatAPI(conversation) {
-  // Replace 'your_api_key_here' with your OpenAI API key
-  const apiKey = "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";
-
-  try {
-    const response = await axios.post(
-      "https://shneurcors.herokuapp.com/https://notegpt.shneur.workers.dev/",
-      {
-        model: "gpt-3.5-turbo",
-        messages: conversation
-      }
-    );
-
-    const chatResponse = response.data.choices[0].message.content;
-    conversation.push({ role: "assistant", content: chatResponse });
-    return chatResponse;
-  } catch (error) {
-    console.error("Error:", error);
-    return "I am sorry, I could not process your request.";
-  }
+    let a = document.createElement('a');
+    a.download = 'notes.json';
+    a.href = url;
+    a.click();
+    a.remove();
 }
 
+// Import notes
+function importNotes() {
+    document.getElementById('file-input').click();
+}
+
+// Handle file select
+function handleFileSelect(event) {
+    let file = event.target.files[0];
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        let contents = e.target.result;
+        let notes = JSON.parse(contents);
+        localStorage.setItem('notes', JSON.stringify(notes));
+        displayNotes(notes);
+    };
+    reader.readAsText(file);
+}
+
+// Get the modal
+var modal = document.getElementById("how-to-modal");
+
+// Get the button that opens the modal```javascript
+var btn = document.getElementById("how-to-button");
+
+// Get the <span> element that closes the modal
+var span = document.getElementsByClassName("close")[0];
+
+// When the user clicks the button, open the modal 
+btn.onclick = function() {
+  modal.style.display = "block";
+}
+
+// When the user clicks on <span> (x), close the modal
+span.onclick = function() {
+  modal.style.display = "none";
+}
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
