@@ -270,3 +270,22 @@ div#note-form {
     align-items: center;
     justify-content: space-between;
 }
+/* CSS for mobile devices */
+@media (max-width: 600px) {
+  #main-stuff {
+    display: none;
+  }
+
+  #mobile-message {
+    display: block;
+    text-align: center;
+    padding: 20px;
+  }
+}
+
+/* CSS for desktop devices */
+@media (min-width: 601px) {
+  #mobile-message {
+    display: none;
+  }
+}
