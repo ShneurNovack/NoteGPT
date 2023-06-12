@@ -13,15 +13,56 @@
 </head>
 
 <body>
-  <div id="chat-container">
-    <div id="messages">
+  <div id="maim-stuff">
+    <div id="notes-stuff">
+      <div id="import-export">
+        <button onclick="exportNotes()">Export Notes</button>
+        <button onclick="importNotes()">Import Notes</button>
+        <input type="file" id="file-input" style="display: none;" onchange="handleFileSelect(event)" />
+      </div>
+      <div id="note-form">
+        <div id="title">NoteGPT v1.3</div>
+        <div id="desc"></div>
+        <button id="how-to-button">How to use</button>
+      </div>
+
+      <div id="notes"></div>
     </div>
-    <div id="input-container">
-      <div id="typing-indicator" style="display: none;">typing...</div>
-      <input id="input" type="text" placeholder="Type your message...">
-      <button id="submit">»</button>
+    <div id="chat-stuff">
+      <div id="chat-form">
+        <textarea id="chat-input" placeholder="Ask the AI something"></textarea>
+
+        <div id="buttons">
+          <button onclick="askAI()">Ask</button>
+          <button id="upload-button">Upload Image</button>
+          <input type="file" id="image-upload" accept="image/*" style="display: none;">
+          <button onclick="deleteChatLog()">Delete Chat Log</button>
+        </div>
+      </div>
+      <div id="crawlSpace">
+        <div id="ai-thinking">AI is thinking...</div>
+      </div>
+      <div id="chat-log"></div>
+
     </div>
   </div>
+
+  <div id="how-to-modal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>How to use NoteGPT</h2>
+      <p>1. Ask the AI a question: Type your question or command in the text area at the bottom of the page and press the "Ask" button or hit Enter.</p>
+      <p>2. Add a note: Simply ask the AI to remember something for you. For example, you can say "Remember that my bike is blue". The AI will create a note with this information.</p>
+      <p>3. Edit a note: Ask the AI to change a note. For example, you can say "Change the note about my bike to say that it's red". The AI will update the note with the new information.</p>
+      <p>4. Delete a note: Ask the AI to forget a note. For example, you can say "Forget the note about my bike". The AI will delete the note.</p>
+      <p>5. View your notes: All your current notes are displayed on the left side of the page. You can edit or delete them manually.</p>
+      <p>6. Export your notes: Click the "Export Notes" button to download a JSON file with all your notes.</p>
+      <p>7. Import notes: Click the "Import Notes" button and select a JSON file to load notes from that file.</p>
+      <p>9. Delete the chat log: Click the "Delete Chat Log" button to clear the chat history.</p>
+      <p>Remember, the AI is here to help you manage your notes. Don't hesitate to ask it for help or clarification.</p>
+    </div>
+  </div>
+
 </body>
 
 </html>
