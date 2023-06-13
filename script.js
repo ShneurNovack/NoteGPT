@@ -234,7 +234,7 @@ function handleFileSelect(event) {
 // Get the modal
 var modal = document.getElementById("how-to-modal");
 
-// Get the button that opens the modal```javascript
+// Get the button that opens the modal
 var btn = document.getElementById("how-to-button");
 
 // Get the <span> element that closes the modal
