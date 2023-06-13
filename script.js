@@ -4,7 +4,6 @@ function deleteChatLog() {
     document.getElementById('chat-log').innerHTML = '';
 }
 
-
 // Load notes from local storage
 window.onload = function() {
     let notes = JSON.parse(localStorage.getItem('notes')) || [];
