@@ -105,7 +105,8 @@ ${notesText}` },
         method: 'POST',
         body: JSON.stringify({
             model: 'gpt-4',
-            messages: messages
+            messages: messages,
+            temperature: 0.5
         })
     })
     .then(response => response.json())
