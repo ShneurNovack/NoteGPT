@@ -103,7 +103,7 @@ ${notesText}` },
     fetch('https://shneurcors.herokuapp.com/https://notegpt.shneur.workers.dev/', {
         method: 'POST',
         body: JSON.stringify({
-            model: 'gpt-4',
+            model: 'gpt-4-turbo-preview',
             messages: messages,
             temperature: 0.5
         })
